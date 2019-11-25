@@ -1,17 +1,18 @@
 #ifndef MIMI_HPP_INCLUDED
 #define MIMI_HPP_INCLUDED
 
-#include <iterator>
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace mimi
 {
 	template <typename A>
-	class iterator : public std::iterator<std::forward_iterator_tag, A>
+	class iterator
 	{
 		public:
-			virtual A next(void) = 0;
+			virtual ~iterator(void);
+			virtual std::optional<A> next(void) = 0;
 			virtual bool hasNext(void) = 0;
 	};
 
@@ -19,7 +20,7 @@ namespace mimi
 	class mzero : public iterator<A>
 	{
 		public:
-			A next(void) { return A(); }
+			std::optional<A> next(void) { return std::nullopt; }
 			bool hasNext(void) { return false; }
 	};
 
@@ -27,53 +28,59 @@ namespace mimi
 	class unit : public iterator<A>
 	{
 		public:
-			unit(A item) : m_item(std::make_unique<A>(item)) { }
-			A next(void) { return *(m_item.release()); }
+			unit(A item) : m_item(item) { }
+			std::optional<A> next(void)
+			{
+				auto value = m_item;
+				m_item.reset();
+				return value;
+			}
 			bool hasNext(void) { return (bool)m_item; }
 
 		private:
-			std::unique_ptr<A> m_item;
+			std::optional<A> m_item;
 	};
 
 	template <typename A, typename B>
 	class bind : public iterator<A>
 	{
 		public:
-			bind(std::unique_ptr<iterator<A>> a,
+			bind(iterator<A>& a,
 					std::function<std::unique_ptr<iterator<B>> (A)> f) :
-				m_a(std::move(a)),
-				m_f(f)
+				m_a(std::make_unique<iterator<A>>(a)),
+				m_func(f)
 			{
-				if (m_a->hasNext())
-				{ m_b = std::move(m_f(m_a->next())); }
-				else { m_b = std::make_unique<mzero<B>>(); }
 			}
 
-			A next(void)
+			std::optional<A> next(void)
 			{
 				if (m_b->hasNext()) { return m_b->next(); }
 				if (m_a->hasNext()) { m_b = m_f( m_a->next() ); }
 				return m_b->next();
 			}
-			bool hasNext(void) { return m_a->hasNext() && m_b->hasNext(); }
+			bool hasNext(void) { return m_a.hasNext() && m_b.hasNext(); }
 
 		private:
 			std::unique_ptr<iterator<A>> m_a;
 			std::unique_ptr<iterator<B>> m_b;
-			std::function<std::unique_ptr<iterator<B>> (A)> m_f;
+			std::function<std::unique_ptr<iterator<B>> (A)> m_func;
 	};
 
 	template <typename A>
 	class mplus : public iterator<A>
 	{
 		public:
-			mplus(std::unique_ptr<iterator<A>> a, std::unique_ptr<iterator<A>> b) :
-				m_a(std::move(a)), m_b(std::move(b)) { }
+			mplus(iterator<A>& a, iterator<A>& b) :
+				m_a(std::make_unique<iterator<A>>(a)),
+				m_b(std::make_unique<iterator<A>>(b))
+			{ }
 
-			A next(void)
+			std::optional<A> next(void)
 			{
-				if (m_a->hasNext()) { return m_a->next(); }
-				else { return m_b->next(); }
+				bool aNext = m_a->hasNext();
+				auto a = m_a->next();
+				auto b = m_b->next();
+				return aNext ? a : b;
 			}
 			bool hasNext(void) { return m_a->hasNext() || m_b->hasNext(); }
 
@@ -82,31 +89,29 @@ namespace mimi
 	};
 
 	template <typename A>
-	std::unique_ptr<iterator<A>> make_mimi(void)
+	auto make_mimi(void)
 	{
 		return std::make_unique<mzero<A>>();
 	}
 
 	template <typename A>
-	std::unique_ptr<iterator<A>> make_mimi(A item)
+	auto make_mimi(A item)
 	{
 		return std::make_unique<unit<A>>(item);
 	}
 
 	template <typename A, typename B>
-	std::unique_ptr<iterator<A>> make_mimi(
-			std::unique_ptr<iterator<A>> a,
+	auto make_mimi(
+			iterator<A>& a,
 			std::function<std::unique_ptr<iterator<B>> (A)> f)
 	{
-		return std::make_unique<bind<A, B>>(std::move(a), f);
+		return std::make_unique<bind<A, B>>(a, f);
 	}
 
 	template <typename A>
-	std::unique_ptr<iterator<A>> make_mimi(
-		std::unique_ptr<iterator<A>> a,
-		std::unique_ptr<iterator<A>> b)
+	auto make_mimi(iterator<A>& a, iterator<A>& b)
 	{
-		return std::make_unique<mplus<A>>(std::move(a), std::move(b));
+		return std::make_unique<mplus<A>>(a, b);
 	}
 };
 
