@@ -42,7 +42,7 @@ namespace mimi
 	};
 
 	template <typename A, typename B>
-	class bind : public iterator<A>
+	class bind : public iterator<B>
 	{
 		public:
 			bind(std::unique_ptr<iterator<A>> a,
@@ -52,7 +52,7 @@ namespace mimi
 				m_func(f)
 			{ }
 
-			std::optional<A> next(void)
+			std::optional<B> next(void)
 			{
 				if (m_b->hasNext()) { return m_b->next(); }
 				if (m_a->hasNext()) { m_b = m_func( m_a->next().value() ); }
