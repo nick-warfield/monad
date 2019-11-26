@@ -1,9 +1,7 @@
 #ifndef MIMI_HPP_INCLUDED
 #define MIMI_HPP_INCLUDED
 
-#include <iostream>
 #include <functional>
-#include <memory>
 #include <optional>
 
 namespace mimi
@@ -16,9 +14,6 @@ namespace mimi
 			virtual std::optional<A> next(void) = 0;
 			virtual bool hasNext(void) = 0;
 	};
-
-	template <typename T>
-	using itt = std::unique_ptr<iterator<T>>;
 
 	template <typename A>
 	class mzero : public iterator<A>
@@ -46,14 +41,13 @@ namespace mimi
 	};
 
 	template <typename A, typename B>
-	class bind : public iterator<B>
+	class mbind : public iterator<B>
 	{
 		public:
-			bind(iterator<A>& a, std::function<iterator<B>* (A)> f) :
-				m_a(&a),
-				m_b(new mzero<B>()),
-				m_func(f)
-			{ }
+			mbind(iterator<A> *a, std::function<iterator<B>* (A)> f) :
+				m_a(a), m_b(new mzero<B>()), m_func(f) { }
+			mbind(iterator<A>& a, std::function<iterator<B>* (A)> f) :
+				m_a(&a), m_b(new mzero<B>()), m_func(f) { }
 
 			std::optional<B> next(void)
 			{
@@ -73,6 +67,7 @@ namespace mimi
 	class mplus : public iterator<A>
 	{
 		public:
+			mplus(iterator<A> *a, iterator<A> *b) : m_a(a), m_b(b) { }
 			mplus(iterator<A>& a, iterator<A>& b) : m_a(&a), m_b(&b) { }
 
 			std::optional<A> next(void)
