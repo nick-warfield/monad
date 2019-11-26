@@ -84,32 +84,6 @@ namespace mimi
 		private:
 			iterator<A> *m_a, *m_b;
 	};
-
-//	template <typename A>
-//	auto make_mimi(void)
-//	{
-//		return std::make_unique<mzero<A>>();
-//	}
-//
-//	template <typename A>
-//	auto make_mimi(A item)
-//	{
-//		return std::make_unique<unit<A>>(item);
-//	}
-//
-//	template <typename A, typename B>
-//	auto make_mimi(
-//			std::unique_ptr<iterator<A>> a,
-//			std::function<std::unique_ptr<iterator<B>> (A)> f)
-//	{
-//		return std::make_unique<bind<A, B>>(std::move(a), f);
-//	}
-//
-//	template <typename A>
-//	auto make_mimi(std::unique_ptr<iterator<A>> a, std::unique_ptr<iterator<A>> b)
-//	{
-//		return std::make_unique<mplus<A>>(std::move(a), std::move(b));
-//	}
 };
 
 #endif
